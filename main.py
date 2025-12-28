@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 
 app = FastAPI(title="English-Uzbek Dictionary API")
 
-# Ma'lumotlar
+# So'zlar bazasi
 words_db = [
     {"id": 1, "english": "hello", "uzbek": "salom", "example": "Hello, how are you?"},
     {"id": 2, "english": "book", "uzbek": "kitob", "example": "I'm reading a book."},
@@ -11,6 +12,9 @@ words_db = [
 ]
 
 next_id = 4
+
+# YANGI: Oxirgi foydalanuvchilar
+recent_users = []
 
 # CORS
 app.add_middleware(
@@ -28,6 +32,52 @@ def read_root():
         "status": "success"
     }
 
+# YANGI: Foydalanuvchi kirganini ro'yxatga olish
+@app.post("/api/login")
+def user_login(name: str = Form(...)):
+    login_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Oxirgi kirishlardan topish (agar avval kirgan bo'lsa)
+    existing = None
+    for user in recent_users:
+        if user['name'].lower() == name.lower():
+            existing = user
+            break
+    
+    if existing:
+        # Vaqtni yangilash
+        existing['last_login'] = login_time
+        existing['visit_count'] += 1
+    else:
+        # Yangi foydalanuvchi
+        new_user = {
+            "name": name,
+            "last_login": login_time,
+            "visit_count": 1
+        }
+        recent_users.insert(0, new_user)  # Boshiga qo'shish
+    
+    # Faqat oxirgi 10 tani saqlash
+    if len(recent_users) > 10:
+        recent_users.pop()
+    
+    print(f"Login: {name} at {login_time}")
+    
+    return {
+        "success": True,
+        "message": f"Xush kelibsiz, {name}!",
+        "user": {"name": name, "last_login": login_time}
+    }
+
+# YANGI: Oxirgi kirishlarni olish
+@app.get("/api/recent-users")
+def get_recent_users():
+    return {
+        "success": True,
+        "users": recent_users[:10]  # Oxirgi 10 ta
+    }
+
+# So'zlar endpointlari (oldingicha)
 @app.get("/api/words")
 def get_words():
     return {"success": True, "words": words_db}
@@ -54,7 +104,6 @@ def create_word(english: str = Form(...), uzbek: str = Form(...), example: str =
     next_id += 1
     
     print(f"Yangi so'z qo'shildi: {new_word}")
-    print(f"Jami so'zlar: {len(words_db)}")
     
     return {
         "success": True,
@@ -64,8 +113,6 @@ def create_word(english: str = Form(...), uzbek: str = Form(...), example: str =
 
 @app.put("/api/words/{word_id}")
 def update_word(word_id: int, english: str = Form(...), uzbek: str = Form(...), example: str = Form(...)):
-    global words_db
-    
     for word in words_db:
         if word['id'] == word_id:
             word['english'] = english.lower()
@@ -82,8 +129,6 @@ def update_word(word_id: int, english: str = Form(...), uzbek: str = Form(...), 
 
 @app.delete("/api/words/{word_id}")
 def delete_word(word_id: int):
-    global words_db
-    
     for i, word in enumerate(words_db):
         if word['id'] == word_id:
             deleted_word = words_db.pop(i)

@@ -1,16 +1,15 @@
 from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="My Flutter Backend API")
+app = FastAPI(title="English-Uzbek Dictionary API")
 
-# Ma'lumotlarni saqlaydigan global o'zgaruvchi
-users_db = [
-    {"id": 1, "name": "Ali", "age": 25, "city": "Toshkent"},
-    {"id": 2, "name": "Vali", "age": 30, "city": "Samarqand"},
-    {"id": 3, "name": "Sobir", "age": 28, "city": "Buxoro"}
+# Ma'lumotlar
+words_db = [
+    {"id": 1, "english": "hello", "uzbek": "salom", "example": "Hello, how are you?"},
+    {"id": 2, "english": "book", "uzbek": "kitob", "example": "I'm reading a book."},
+    {"id": 3, "english": "water", "uzbek": "suv", "example": "Drink some water."}
 ]
 
-# Keyingi ID
 next_id = 4
 
 # CORS
@@ -25,74 +24,74 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {
-        "message": "Salom! Backend muvaffaqiyatli ishlamoqda 🚀",
+        "message": "Dictionary API ishlayapti 📚",
         "status": "success"
     }
 
-@app.get("/api/users")
-def get_users():
-    return {"success": True, "users": users_db}
+@app.get("/api/words")
+def get_words():
+    return {"success": True, "words": words_db}
 
-@app.get("/api/users/{user_id}")
-def get_user(user_id: int):
-    for user in users_db:
-        if user['id'] == user_id:
-            return {"success": True, "user": user}
-    return {"success": False, "message": "Foydalanuvchi topilmadi"}
+@app.get("/api/words/{word_id}")
+def get_word(word_id: int):
+    for word in words_db:
+        if word['id'] == word_id:
+            return {"success": True, "word": word}
+    return {"success": False, "message": "So'z topilmadi"}
 
-@app.post("/api/users")
-def create_user(name: str = Form(...), age: int = Form(...)):
+@app.post("/api/words")
+def create_word(english: str = Form(...), uzbek: str = Form(...), example: str = Form(...)):
     global next_id
     
-    # Yangi foydalanuvchi yaratish
-    new_user = {
+    new_word = {
         "id": next_id,
-        "name": name,
-        "age": age,
-        "city": "Toshkent"
+        "english": english.lower(),
+        "uzbek": uzbek,
+        "example": example
     }
     
-    # Ro'yxatga qo'shish
-    users_db.append(new_user)
+    words_db.append(new_word)
     next_id += 1
     
-    print(f"Yangi foydalanuvchi qo'shildi: {new_user}")
-    print(f"Jami foydalanuvchilar: {len(users_db)}")
+    print(f"Yangi so'z qo'shildi: {new_word}")
+    print(f"Jami so'zlar: {len(words_db)}")
     
     return {
         "success": True,
-        "message": "Foydalanuvchi yaratildi",
-        "user": new_user
+        "message": "So'z qo'shildi",
+        "word": new_word
     }
 
-@app.delete("/api/users/{user_id}")
-def delete_user(user_id: int):
-    global users_db
+@app.put("/api/words/{word_id}")
+def update_word(word_id: int, english: str = Form(...), uzbek: str = Form(...), example: str = Form(...)):
+    global words_db
     
-    for i, user in enumerate(users_db):
-        if user['id'] == user_id:
-            deleted_user = users_db.pop(i)
-            print(f"O'chirildi: {deleted_user}")
+    for word in words_db:
+        if word['id'] == word_id:
+            word['english'] = english.lower()
+            word['uzbek'] = uzbek
+            word['example'] = example
+            print(f"Yangilandi: {word}")
             return {
                 "success": True,
-                "message": "Foydalanuvchi o'chirildi",
-                "user": deleted_user
+                "message": "So'z yangilandi",
+                "word": word
             }
     
-    return {"success": False, "message": "Foydalanuvchi topilmadi"}
-@app.put("/api/users/{user_id}")
-def update_user(user_id: int, name: str = Form(...), age: int = Form(...)):
-    global users_db
+    return {"success": False, "message": "So'z topilmadi"}
+
+@app.delete("/api/words/{word_id}")
+def delete_word(word_id: int):
+    global words_db
     
-    for user in users_db:
-        if user['id'] == user_id:
-            user['name'] = name
-            user['age'] = age
-            print(f"Yangilandi: {user}")
+    for i, word in enumerate(words_db):
+        if word['id'] == word_id:
+            deleted_word = words_db.pop(i)
+            print(f"O'chirildi: {deleted_word}")
             return {
                 "success": True,
-                "message": "Foydalanuvchi yangilandi",
-                "user": user
+                "message": "So'z o'chirildi",
+                "word": deleted_word
             }
     
-    return {"success": False, "message": "Foydalanuvchi topilmadi"}
+    return {"success": False, "message": "So'z topilmadi"}
